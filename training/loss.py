@@ -64,9 +64,10 @@ class StyleGAN2Loss(Loss):
                 img = upfirdn2d.filter2d(img, f / f.sum())
         if self.augment_pipe is not None:
             img = self.augment_pipe(img)
-        logits = self.D(img, c, update_emas=update_emas)
+        logits, embedding = self.D(img, c, update_emas=update_emas)
         #Update this so that it doesn't just return the logits, but also the level above it.
-        
+        print(embedding.shape)
+        exit()
         return logits
 
     #So for our cheaters GAN, we introduce a few things
