@@ -93,6 +93,7 @@ class StyleGAN2Loss(Loss):
             with torch.autograd.profiler.record_function('Gmain_forward'):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c)
                 gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma)
+                
                 bce = torch.nn.BCELoss()
                 recon_loss = bce(torch.sigmoid(gen_embeddings), torch.sigmoid(gen_z))#Notably, z is the same, but embeddings are not
                 print("Recon loss for maximize generated images:",recon_loss)
@@ -136,7 +137,7 @@ class StyleGAN2Loss(Loss):
                 training_stats.report('Loss/signs/fake', gen_logits.sign())
                 loss_Dgen = torch.nn.functional.softplus(gen_logits) # -log(1 - sigmoid(gen_logits))
             with torch.autograd.profiler.record_function('Dgen_backward'):
-                (loss_Gmain.mean().mul(gain) + recon_loss).backward()
+                (loss_Dgen.mean().mul(gain) + recon_loss).backward()
 
         # Dmain: Maximize logits for real images.
         # Dr1: Apply R1 regularization.
