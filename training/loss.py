@@ -96,7 +96,6 @@ class StyleGAN2Loss(Loss):
                 
                 print(gen_embeddings)
                 print(gen_z)
-                exit()
                 bce = torch.nn.BCELoss()
                 recon_loss = bce(gen_embeddings, gen_z)#Loss between original latent and near last from d
                 print("Recon loss for maximize generated images:",recon_loss)
@@ -136,7 +135,6 @@ class StyleGAN2Loss(Loss):
                 gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma, update_emas=True)
                 print(gen_embeddings)
                 print(gen_z)
-                exit()
                 bce = torch.nn.BCELoss()
                 recon_loss = bce(gen_embeddings, gen_z)#Notably, z is the same, but embeddings are not
                 print("Recon loss for minize generated images:",recon_loss)           
