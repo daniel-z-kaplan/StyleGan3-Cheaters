@@ -65,20 +65,19 @@ class StyleGAN2Loss(Loss):
         if self.augment_pipe is not None:
             img = self.augment_pipe(img)
         logits, embedding = self.D(img, c, update_emas=update_emas)
-        #Update this so that it doesn't just return the logits, but also the level above it.
-        print(embedding.shape)
-        exit()
-        return logits
+        
+        #Now that we have the embedding, we just return it
+        return logits, embedding
 
-    #So for our cheaters GAN, we introduce a few things
-    #First, we have a reconstruction loss on... one side, maybe on both sides
-    #For the difference between the second G layer (x,image size)
-    #And the second to last D layer (x, image size)
-    #This is our latent reconstruction loss
-    #Then, for each *real* image, we turn them into embeddings via D
-    #And have G reconstruct them
-    #Then we.... do something. I'm not sure what. We could have another reconstruction loss, sure
-    #And.... train D and G on them...? Maybe.
+    #We need a reconstruction loss between D_embedding and generated_ws.
+    #The reason is we need these to match
+    #That way, when we get embeddings from real images
+    #They should match the WS on the other side
+    #And then we can turn them into full images
+    #.....and thats all I got
+    
+    
+    
     
     def accumulate_gradients(self, phase, real_img, real_c, gen_z, gen_c, gain, cur_nimg):
         assert phase in ['Gmain', 'Greg', 'Gboth', 'Dmain', 'Dreg', 'Dboth']
@@ -92,13 +91,17 @@ class StyleGAN2Loss(Loss):
         if phase in ['Gmain', 'Gboth']:
             with torch.autograd.profiler.record_function('Gmain_forward'):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c)
-                gen_logits = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma)
+                gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma)
+                bce = torch.nn.BCELoss()
+                recon_loss = bce(gen_embeddings, _gen_ws)
+                print("Recon loss for maximize generated images:",recon_loss)
+                
                 training_stats.report('Loss/scores/fake', gen_logits)
                 training_stats.report('Loss/signs/fake', gen_logits.sign())
                 loss_Gmain = torch.nn.functional.softplus(-gen_logits) # -log(sigmoid(gen_logits))
                 training_stats.report('Loss/G/loss', loss_Gmain)
             with torch.autograd.profiler.record_function('Gmain_backward'):
-                loss_Gmain.mean().mul(gain).backward()
+                (loss_Gmain.mean().mul(gain) + recon_loss).backward()
 
         # Gpl: Apply path length regularization.
         if phase in ['Greg', 'Gboth']:
@@ -123,12 +126,16 @@ class StyleGAN2Loss(Loss):
         if phase in ['Dmain', 'Dboth']:
             with torch.autograd.profiler.record_function('Dgen_forward'):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c, update_emas=True)
-                gen_logits = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma, update_emas=True)
+                gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma, update_emas=True)
+                bce = torch.nn.BCELoss()
+                recon_loss = bce(gen_embeddings, _gen_ws)
+                print("Recon loss for minize generated images:",recon_loss)           
+                
                 training_stats.report('Loss/scores/fake', gen_logits)
                 training_stats.report('Loss/signs/fake', gen_logits.sign())
                 loss_Dgen = torch.nn.functional.softplus(gen_logits) # -log(1 - sigmoid(gen_logits))
             with torch.autograd.profiler.record_function('Dgen_backward'):
-                loss_Dgen.mean().mul(gain).backward()
+                (loss_Gmain.mean().mul(gain) + recon_loss).backward()
 
         # Dmain: Maximize logits for real images.
         # Dr1: Apply R1 regularization.
@@ -137,7 +144,8 @@ class StyleGAN2Loss(Loss):
             with torch.autograd.profiler.record_function(name + '_forward'):
                 
                 real_img_tmp = real_img.detach().requires_grad_(phase in ['Dreg', 'Dboth'])
-                real_logits = self.run_D(real_img_tmp, real_c, blur_sigma=blur_sigma)
+                real_logits, real_embeddings = self.run_D(real_img_tmp, real_c, blur_sigma=blur_sigma)
+                #We want these real embeddings turned into a generator/real image
                 
                 training_stats.report('Loss/scores/real', real_logits)
                 training_stats.report('Loss/signs/real', real_logits.sign())
