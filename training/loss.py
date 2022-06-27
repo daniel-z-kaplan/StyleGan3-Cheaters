@@ -47,9 +47,13 @@ class StyleGAN2Loss(Loss):
                 cutoff = torch.where(torch.rand([], device=ws.device) < self.style_mixing_prob, cutoff, torch.full_like(cutoff, ws.shape[1]))
                 ws[:, cutoff:] = self.G.mapping(torch.randn_like(z), c, update_emas=False)[:, cutoff:]
         img = self.G.synthesis(ws, update_emas=update_emas)
-        print(img.shape)
-        print(ws.shape)
-        exit()
+        #Imag.shape = batch x 3 x final x final
+        #WS.shape = batch x 16?? x 512
+        #WS is the final output from mapping
+        #We have two choices
+        #One is that we do our loss based on D[-1] vs ws output
+        #The other is that we try to do another output layer on D, taking D[-1], and trying to create z.
+        
         return img, ws
 
     def run_D(self, img, c, blur_sigma=0, update_emas=False):
@@ -61,17 +65,19 @@ class StyleGAN2Loss(Loss):
         if self.augment_pipe is not None:
             img = self.augment_pipe(img)
         logits = self.D(img, c, update_emas=update_emas)
+        #Update this so that it doesn't just return the logits, but also the level above it.
+        
         return logits
 
-       #We want to let generator learn from real images
-       #So we convert each real image into an embedding/latent, turn into an image via G,
-       #And then we have reconstruction loss between that and the real/original image.
-       #If D thinks it's a real image, that means G is doing *really* well, unsure about this.
-       #Now, this might make the model try and turn ALL latents into those real images
-       #IE, mode collapse
-       #So we introduce MORE symmetric losses
-       #Specifically, between embedding/latent in G and the same level in D
-       #This isn't important yet though.
+    #So for our cheaters GAN, we introduce a few things
+    #First, we have a reconstruction loss on... one side, maybe on both sides
+    #For the difference between the second G layer (x,image size)
+    #And the second to last D layer (x, image size)
+    #This is our latent reconstruction loss
+    #Then, for each *real* image, we turn them into embeddings via D
+    #And have G reconstruct them
+    #Then we.... do something. I'm not sure what. We could have another reconstruction loss, sure
+    #And.... train D and G on them...? Maybe.
     
     def accumulate_gradients(self, phase, real_img, real_c, gen_z, gen_c, gain, cur_nimg):
         assert phase in ['Gmain', 'Greg', 'Gboth', 'Dmain', 'Dreg', 'Dboth']
@@ -128,8 +134,10 @@ class StyleGAN2Loss(Loss):
         if phase in ['Dmain', 'Dreg', 'Dboth']:
             name = 'Dreal' if phase == 'Dmain' else 'Dr1' if phase == 'Dreg' else 'Dreal_Dr1'
             with torch.autograd.profiler.record_function(name + '_forward'):
+                
                 real_img_tmp = real_img.detach().requires_grad_(phase in ['Dreg', 'Dboth'])
                 real_logits = self.run_D(real_img_tmp, real_c, blur_sigma=blur_sigma)
+                
                 training_stats.report('Loss/scores/real', real_logits)
                 training_stats.report('Loss/signs/real', real_logits.sign())
 

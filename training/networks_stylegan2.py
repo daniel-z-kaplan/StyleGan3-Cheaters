@@ -715,6 +715,7 @@ class DiscriminatorEpilogue(torch.nn.Module):
             x = self.mbstd(x)
         x = self.conv(x)
         x = self.fc(x.flatten(1))
+        print("Prior:",x.shape)
         x = self.out(x)
 
         # Conditioning.
@@ -723,6 +724,8 @@ class DiscriminatorEpilogue(torch.nn.Module):
             x = (x * cmap).sum(dim=1, keepdim=True) * (1 / np.sqrt(self.cmap_dim))
 
         assert x.dtype == dtype
+        print("Final",x.shape)
+        exit()
         return x
 
     def extra_repr(self):
@@ -786,6 +789,8 @@ class Discriminator(torch.nn.Module):
         if self.c_dim > 0:
             cmap = self.mapping(None, c)
         x = self.b4(x, img, cmap)
+        #x is the final logits.
+        #
         return x
 
     def extra_repr(self):
