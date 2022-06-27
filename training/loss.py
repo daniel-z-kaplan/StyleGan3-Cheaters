@@ -40,6 +40,9 @@ class StyleGAN2Loss(Loss):
         self.blur_fade_kimg     = blur_fade_kimg
 
     def run_G(self, z, c, update_emas=False):
+        print(z.shape)
+        print(z)
+        exit()
         ws = self.G.mapping(z, c, update_emas=update_emas)
         if self.style_mixing_prob > 0:
             with torch.autograd.profiler.record_function('style_mixing'):
