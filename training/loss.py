@@ -40,9 +40,7 @@ class StyleGAN2Loss(Loss):
         self.blur_fade_kimg     = blur_fade_kimg
 
     def run_G(self, z, c, update_emas=False):
-        print(z.shape)
-        print(z)
-        exit()
+        
         ws = self.G.mapping(z, c, update_emas=update_emas)
         if self.style_mixing_prob > 0:
             with torch.autograd.profiler.record_function('style_mixing'):
@@ -96,7 +94,7 @@ class StyleGAN2Loss(Loss):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c)
                 gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma)
                 bce = torch.nn.BCELoss()
-                recon_loss = bce(gen_embeddings, _gen_ws)
+                recon_loss = bce(gen_embeddings, gen_z)#Loss between original latent and near last from d
                 print("Recon loss for maximize generated images:",recon_loss)
                 
                 training_stats.report('Loss/scores/fake', gen_logits)
@@ -131,7 +129,7 @@ class StyleGAN2Loss(Loss):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c, update_emas=True)
                 gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma, update_emas=True)
                 bce = torch.nn.BCELoss()
-                recon_loss = bce(gen_embeddings, _gen_ws)
+                recon_loss = bce(gen_embeddings, gen_z)#Notably, z is the same, but embeddings are not
                 print("Recon loss for minize generated images:",recon_loss)           
                 
                 training_stats.report('Loss/scores/fake', gen_logits)
