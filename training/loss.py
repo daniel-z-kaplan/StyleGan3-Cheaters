@@ -63,15 +63,15 @@ class StyleGAN2Loss(Loss):
         logits = self.D(img, c, update_emas=update_emas)
         return logits
 
-    #So for our cheaters GAN, we introduce a few things
-    #First, we have a reconstruction loss on... one side, maybe on both sides
-    #For the difference between the second G layer (x,image size)
-    #And the second to last D layer (x, image size)
-    #This is our latent reconstruction loss
-    #Then, for each *real* image, we turn them into embeddings via D
-    #And have G reconstruct them
-    #Then we.... do something. I'm not sure what. We could have another reconstruction loss, sure
-    #And.... train D and G on them...? Maybe.
+       #We want to let generator learn from real images
+       #So we convert each real image into an embedding/latent, turn into an image via G,
+       #And then we have reconstruction loss between that and the real/original image.
+       #If D thinks it's a real image, that means G is doing *really* well, unsure about this.
+       #Now, this might make the model try and turn ALL latents into those real images
+       #IE, mode collapse
+       #So we introduce MORE symmetric losses
+       #Specifically, between embedding/latent in G and the same level in D
+       #This isn't important yet though.
     
     def accumulate_gradients(self, phase, real_img, real_c, gen_z, gen_c, gain, cur_nimg):
         assert phase in ['Gmain', 'Greg', 'Gboth', 'Dmain', 'Dreg', 'Dboth']
