@@ -54,7 +54,8 @@ class StyleGAN2Loss(Loss):
         #We have two choices
         #One is that we do our loss based on D[-1] vs ws output
         #The other is that we try to do another output layer on D, taking D[-1], and trying to create z.
-        
+        #Creating z directly appears to be a poor choice
+        #We should aim to match WS
         return img, ws
 
     def run_D(self, img, c, blur_sigma=0, update_emas=False):
@@ -76,6 +77,10 @@ class StyleGAN2Loss(Loss):
     #They should match the WS on the other side
     #And then we can turn them into full images
     #.....and thats all I got
+    def reconst_loss(self, input, target):
+        recon = ((input - target)**2).sum()
+        return recon
+        
     
     
     
@@ -94,8 +99,7 @@ class StyleGAN2Loss(Loss):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c)
                 gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma)
                 
-                bce = torch.nn.BCELoss()
-                recon_loss = bce(torch.sigmoid(gen_embeddings), torch.sigmoid(gen_z))#Notably, z is the same, but embeddings are not
+                recon_loss = self.reconst_loss(gen_embeddings, gen_z)
                 print("Recon loss for maximize generated images:",recon_loss)
                 
                 training_stats.report('Loss/scores/fake', gen_logits)
@@ -129,9 +133,10 @@ class StyleGAN2Loss(Loss):
             with torch.autograd.profiler.record_function('Dgen_forward'):
                 gen_img, _gen_ws = self.run_G(gen_z, gen_c, update_emas=True)
                 gen_logits, gen_embeddings = self.run_D(gen_img, gen_c, blur_sigma=blur_sigma, update_emas=True)
-                bce = torch.nn.BCELoss()
-                recon_loss = bce(torch.sigmoid(gen_embeddings), torch.sigmoid(gen_z))#Notably, z is the same, but embeddings are not
-                print("Recon loss for minize generated images:",recon_loss)           
+                
+                
+                recon_loss = self.reconst_loss(gen_embeddings, gen_z)
+                print("Recon loss for maximize generated images:",recon_loss)       
                 
                 training_stats.report('Loss/scores/fake', gen_logits)
                 training_stats.report('Loss/signs/fake', gen_logits.sign())
