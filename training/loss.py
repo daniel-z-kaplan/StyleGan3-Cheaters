@@ -54,8 +54,7 @@ class StyleGAN2Loss(Loss):
         #We have two choices
         #One is that we do our loss based on D[-1] vs ws output
         #The other is that we try to do another output layer on D, taking D[-1], and trying to create z.
-        #Creating z directly appears to be a poor choice
-        #We should aim to match WS
+        
         return img, ws
 
     def run_D(self, img, c, blur_sigma=0, update_emas=False):
