@@ -774,7 +774,7 @@ class Discriminator(torch.nn.Module):
         if c_dim > 0:
             self.mapping = MappingNetwork(z_dim=0, c_dim=c_dim, w_dim=cmap_dim, num_ws=None, w_avg_beta=None, **mapping_kwargs)
         self.b4 = DiscriminatorEpilogue(channels_dict[4], cmap_dim=cmap_dim, resolution=4, **epilogue_kwargs, **common_kwargs)
-        self.latents = DiscriminatorEpilogue(channels_dict[4], cmap_dim=cmap_dim, resolution=4, **epilogue_kwargs, **common_kwargs)
+#         self.latents = DiscriminatorEpilogue(channels_dict[4], cmap_dim=cmap_dim, resolution=4, **epilogue_kwargs, **common_kwargs)
         
     def forward(self, img, c, update_emas=False, **block_kwargs):
         _ = update_emas # unused
@@ -790,8 +790,7 @@ class Discriminator(torch.nn.Module):
         #x is the final logits.
         #We will create a simple solution - we will have another epilogue block that generates latents
 #         _ , latent = self.latents(x, img, cmap) 
-#         return x, embedding
-        return x_two, embedding#Temporary drop the special stuff to see if MSE works
+        return x_two, embedding
 
     def extra_repr(self):
         return f'c_dim={self.c_dim:d}, img_resolution={self.img_resolution:d}, img_channels={self.img_channels:d}'
