@@ -714,7 +714,7 @@ class DiscriminatorEpilogue(torch.nn.Module):
         if self.mbstd is not None:
             x = self.mbstd(x)
         x = self.conv(x)
-        embedding = self.fc(x.flatten(1))
+        embedding = self.fc(x.flatten(1))#This is the prior indeed
         x = self.out(embedding)
 
         # Conditioning.
@@ -722,7 +722,7 @@ class DiscriminatorEpilogue(torch.nn.Module):
             misc.assert_shape(cmap, [None, self.cmap_dim])
             x = (x * cmap).sum(dim=1, keepdim=True) * (1 / np.sqrt(self.cmap_dim))
 
-        assert x.dtype == dtype
+        assert x.dtype == dtype#And this is the final
         return x, embedding
 
     def extra_repr(self):
@@ -786,6 +786,8 @@ class Discriminator(torch.nn.Module):
         if self.c_dim > 0:
             cmap = self.mapping(None, c)
         x, embedding = self.b4(x, img, cmap)
+        #x is the final logits.
+        #
         return x, embedding
 
     def extra_repr(self):
