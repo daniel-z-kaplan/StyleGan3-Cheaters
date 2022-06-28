@@ -773,8 +773,9 @@ class Discriminator(torch.nn.Module):
             cur_layer_idx += block.num_layers
         if c_dim > 0:
             self.mapping = MappingNetwork(z_dim=0, c_dim=c_dim, w_dim=cmap_dim, num_ws=None, w_avg_beta=None, **mapping_kwargs)
-        self.b4 = DiscriminatorEpilogue(channels_dict[4], cmap_dim=cmap_dim, resolution=4, **epilogue_kwargs, **common_kwargs)
         self.latent = DiscriminatorEpilogue(channels_dict[4], cmap_dim=cmap_dim, resolution=4, **epilogue_kwargs, **common_kwargs)
+        self.b4 = DiscriminatorEpilogue(channels_dict[4], cmap_dim=cmap_dim, resolution=4, **epilogue_kwargs, **common_kwargs)
+        
     def forward(self, img, c, update_emas=False, **block_kwargs):
         _ = update_emas # unused
         x = None
@@ -785,8 +786,10 @@ class Discriminator(torch.nn.Module):
         cmap = None
         if self.c_dim > 0:
             cmap = self.mapping(None, c)
+        
+        _, latent = self.latent(x, img, cmap)
         x_two, embedding = self.b4(x, img, cmap)
-        _, latent = self.b4(x, img, cmap)
+        
         #x is the final logits.
         #
         return x_two, latent
