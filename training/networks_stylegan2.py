@@ -786,12 +786,12 @@ class Discriminator(torch.nn.Module):
         cmap = None
         if self.c_dim > 0:
             cmap = self.mapping(None, c)
-        x, embedding = self.b4(x, img, cmap)
+        x_two, embedding = self.b4(x, img, cmap)
         #x is the final logits.
         #We will create a simple solution - we will have another epilogue block that generates latents
         _ , latents = self.latents(x, img, cmap) 
 #         return x, embedding
-        return x, latents
+        return x_two, latents
 
     def extra_repr(self):
         return f'c_dim={self.c_dim:d}, img_resolution={self.img_resolution:d}, img_channels={self.img_channels:d}'
